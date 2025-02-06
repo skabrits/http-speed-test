@@ -17,9 +17,9 @@ spec:
       {{- end }}
       labels:
         {{- include "http-speed-test.selectorLabels" . | nindent 8 }}
-        {{ - with .Values.podLabels }}
-        {{ - toYaml . | nindent 8 }}
-        {{ - end }}
+        {{- with .Values.podLabels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
     spec:
       {{- with .Values.imagePullSecrets }}
       imagePullSecrets:
