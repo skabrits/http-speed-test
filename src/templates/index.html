@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>HTTP Upload Speed Test</title>
+  <style>
+      body { font-family: Arial, sans-serif; margin: 40px; }
+      input, button { font-size: 1rem; padding: 0.5rem; }
+      #result { margin-top: 20px; font-weight: bold; }
+      #progressContainer {
+          margin-top: 20px;
+          width: 100%;
+          background-color: #f3f3f3;
+          border: 1px solid #ccc;
+          border-radius: 4px;
+      }
+      #progressBar {
+          width: 0%;
+          height: 25px;
+          background-color: #4caf50;
+          text-align: center;
+          line-height: 25px;
+          color: white;
+          border-radius: 4px;
+      }
+  </style>
+</head>
+<body>
+  <h1>HTTP Upload Speed Test</h1>
+  <label for="size">File Size (MB):</label>
+  <input type="number" id="size" value="10" min="1">
+  <button id="uploadBtn">Start Upload Test</button>
+
+  <div id="progressContainer">
+      <div id="progressBar">0%</div>
+  </div>
+
+  <p id="result"></p>
+
+  <script>
+    // Helper function to generate a Uint8Array filled with random bytes in chunks.
+    function generateRandomBytes(size) {
+      const maxChunk = 65536; // maximum chunk size for crypto.getRandomValues
+      const array = new Uint8Array(size);
+      for (let offset = 0; offset < size; offset += maxChunk) {
+        const chunkSize = Math.min(maxChunk, size - offset);
+        const chunk = new Uint8Array(chunkSize);
+        window.crypto.getRandomValues(chunk);
+        array.set(chunk, offset);
+      }
+      return array;
+    }
+
+    document.getElementById('uploadBtn').addEventListener('click', function() {
+      const sizeMB = parseFloat(document.getElementById('size').value);
+      if (isNaN(sizeMB) || sizeMB <= 0) {
+        alert("Please enter a valid file size.");
+        return;
+      }
+      const sizeBytes = sizeMB * 1024 * 1024;
+
+      // Generate random bytes in chunks.
+      const byteArray = generateRandomBytes(sizeBytes);
+      // Create a Blob from the byte array.
+      const blob = new Blob([byteArray], { type: 'application/octet-stream' });
+
+      // Reset progress bar.
+      const progressBar = document.getElementById('progressBar');
+      progressBar.style.width = "0%";
+      progressBar.innerText = "0%";
+
+      // Record the start time.
+      const startTime = performance.now();
+
+      // Create a new XMLHttpRequest.
+      const xhr = new XMLHttpRequest();
+      xhr.open('POST', '/upload');
+
+      // Update progress bar during upload.
+      xhr.upload.onprogress = function(event) {
+        if (event.lengthComputable) {
+          const percentComplete = (event.loaded / event.total) * 100;
+          progressBar.style.width = percentComplete.toFixed(2) + "%";
+          progressBar.innerText = percentComplete.toFixed(0) + "%";
+        }
+      };
+
+      xhr.onload = function() {
+        const endTime = performance.now();
+        const durationSeconds = (endTime - startTime) / 1000;
+        if (xhr.status === 200) {
+          // Calculate upload speed in Mbps (Megabits per second).
+          const speedMbps = (sizeBytes * 8 / durationSeconds) / (1024 * 1024);
+          document.getElementById('result').innerText =
+            `Upload completed in ${durationSeconds.toFixed(2)} seconds. Speed: ${speedMbps.toFixed(2)} Mbps.`;
+        } else {
+          document.getElementById('result').innerText = 'Upload failed.';
+        }
+      };
+
+      xhr.onerror = function() {
+        document.getElementById('result').innerText = 'Upload failed.';
+      };
+
+      xhr.send(blob);
+    });
+  </script>
+</body>
+</html>
